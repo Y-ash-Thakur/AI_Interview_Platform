@@ -3,22 +3,17 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import InterviewHistory from '@/components/interview/InterviewHistory';
 import { Phone, LogOut, User } from 'lucide-react';
+import { signOut } from './actions';
 
 export default async function HomePage() {
   const supabase = createClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
+  // Use getSession() to match middleware and avoid redirect loops (getUser can disagree with middleware's getSession)
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
 
   if (!user) {
     redirect('/sign-in');
   }
-
-  const handleSignOut = async () => {
-    'use server';
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    redirect('/sign-in');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -38,7 +33,7 @@ export default async function HomePage() {
                 </span>
               </div>
               
-              <form action={handleSignOut}>
+              <form action={signOut}>
                 <button
                   type="submit"
                   className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"

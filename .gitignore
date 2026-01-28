@@ -38,3 +38,5 @@ next-env.d.ts
 
 QUICKSTART.md
 VAPI_SETUP.md
+.env.local.example
+.gitignore

@@ -88,7 +88,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="container mx-auto px-4 py-8 text-center text-gray-600">
-        <p>&copy; 2024 AI Interview Platform. All rights reserved.</p>
+        <p>Made with 🩵 Yash Thakur</p>
       </footer>
     </div>
   );

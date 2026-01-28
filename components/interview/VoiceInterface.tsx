@@ -2,54 +2,37 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
-
-declare global {
-  interface Window {
-    vapiSDK?: any;
-  }
-}
+import Vapi from '@vapi-ai/web';
 
 export default function VoiceInterface() {
+  const [sdkLoaded, setSdkLoaded] = useState(true); // SDK is always loaded when component mounts (via npm import)
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [callStatus, setCallStatus] = useState<string>('Ready to start');
   const [transcript, setTranscript] = useState<string[]>([]);
-  const vapiInstance = useRef<any>(null);
+  const vapiInstance = useRef<Vapi | null>(null);
 
+  // Cleanup on unmount
   useEffect(() => {
-    // Load Vapi SDK
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      console.log('Vapi SDK loaded');
-    };
-
     return () => {
       if (vapiInstance.current) {
         vapiInstance.current.stop();
-      }
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
       }
     };
   }, []);
 
   const startCall = async () => {
     try {
-      if (!window.vapiSDK) {
-        throw new Error('Vapi SDK not loaded');
+      if (!process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
+        throw new Error('Vapi public key is not configured');
       }
 
-      const vapi = new window.vapiSDK(
-        process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY
-      );
+      // 🔹 Create Vapi instance using npm package
+      const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY);
 
       vapiInstance.current = vapi;
 
-      // Event listeners
+      // 🔹 Event listeners
       vapi.on('call-start', () => {
         console.log('Call started');
         setIsCallActive(true);
@@ -72,7 +55,7 @@ export default function VoiceInterface() {
 
       vapi.on('message', (message: any) => {
         console.log('Message:', message);
-        
+
         if (message.type === 'transcript' && message.transcript) {
           setTranscript(prev => [...prev, `${message.role}: ${message.transcript}`]);
         }
@@ -83,45 +66,9 @@ export default function VoiceInterface() {
         setCallStatus('Error: ' + error.message);
       });
 
-      // Start the call with assistant
-      await vapi.start({
-        name: 'AI Interview Assistant',
-        model: {
-          provider: 'openai',
-          model: 'gpt-4',
-          temperature: 0.7,
-          messages: [
-            {
-              role: 'system',
-              content: `You are a professional interview assistant. Your job is to:
-              
-1. Greet the candidate warmly
-2. Collect these parameters in order:
-   - Role they're applying for
-   - Type of interview (technical/behavioral/mixed)
-   - Difficulty level (easy/medium/hard)  
-   - Their current role (optional)
-   - Number of questions (suggest 5-8)
+      // 🔹 IMPORTANT: Use ASSISTANT ID (from Vapi Dashboard)
+      vapi.start("e3b80a62-c5fb-480e-ace4-0b03fa51b2cf"); // 🔴 YOUR ASSISTANT ID
 
-3. After collecting all parameters, call the generate_questions function
-
-4. Once you receive the questions, ask them one by one
-
-5. After each answer, briefly acknowledge it and move to the next question
-
-6. When all questions are answered, thank them and let them know feedback is being generated
-
-Be conversational, professional, and encouraging.`,
-            },
-          ],
-        },
-        voice: {
-          provider: 'playht',
-          voiceId: 'jennifer',
-        },
-        firstMessage: "Hello! I'm your AI interview assistant. I'm here to help you practice for your upcoming interview. What role are you preparing for?",
-        serverUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/vapi/webhook`,
-      });
     } catch (error: any) {
       console.error('Error starting call:', error);
       setCallStatus('Failed to start call: ' + error.message);
@@ -145,7 +92,7 @@ Be conversational, professional, and encouraging.`,
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[500px] space-y-6">
-      {/* Status Display */}
+      {/* Status */}
       <div className="text-center">
         <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full ${
           isCallActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
@@ -173,7 +120,7 @@ Be conversational, professional, and encouraging.`,
             <Phone className="w-10 h-10 text-white" />
           )}
         </button>
-        
+
         {isCallActive && (
           <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex items-center justify-center">
             <button
